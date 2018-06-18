@@ -1,0 +1,22 @@
+{
+  "name": "koa-bap",
+  "description": "koa http-server BAP",
+  "main": "koa-bap.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "Black Eye Technology",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/blackeyetech/koa-bap.git"
+  },
+  "keywords": ["besh", "bap", "http-server", "koa"],
+  "bugs": {
+    "url": "https://github.com/blackeyetech/koa-bap/issues"
+  },
+  "homepage": "https://github.com/blackeyetech/koa-bap#readme",
+  "dependencies": {
+    "koa": "^2.5.1"
+  }
+}

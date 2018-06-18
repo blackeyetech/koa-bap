@@ -1,5 +1,5 @@
 {
-  "name": "koa-bap",
+  "name": "@besh/koa-bap",
   "description": "koa http-server BAP",
   "main": "koa-bap.js",
   "scripts": {

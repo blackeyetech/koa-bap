@@ -29,7 +29,7 @@ class InternalError extends Error {
     this.expose = false;
     this.status = 500;
 
-    http.log.error(msg);
+    // http.log.error(msg);
   }
 }
 

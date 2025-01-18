@@ -3,14 +3,17 @@
 const Koa = require("koa");
 const fs = require("fs");
 const path = require("path");
+const http = require("http");
 
 // Config consts
 const CFG_BASEPATH = "basepath";
 const CFG_BASEPATH_DEFAULT = "/";
 
 const CFG_PORT = "port";
+const CFG_KEEP_ALIVE_TIMEOUT = "keep-alive-timeout";
+const CFG_HEADERS_TIMEOUT = "headers-timeout";
 
-const CFG_BOOTSTRAPS = "bootstraps"
+const CFG_BOOTSTRAPS = "bootstraps";
 const CFG_BOOTSTRAPS_DEFAULT = [];
 
 class UserError extends Error {
@@ -36,7 +39,7 @@ class InternalError extends Error {
 class KoaHttpServerBap extends besh.HttpServerBap {
   constructor(name) {
     super(name);
-    
+
     this.log.info("Initialising ...");
 
     this.app = new Koa();
@@ -55,7 +58,7 @@ class KoaHttpServerBap extends besh.HttpServerBap {
     let bootstraps = this.getCfg(CFG_BOOTSTRAPS, CFG_BOOTSTRAPS_DEFAULT);
 
     if (typeof bootstraps === "string") {
-      bootstraps = [ bootstraps ];
+      bootstraps = [bootstraps];
     }
 
     if (!Array.isArray(bootstraps) || bootstraps.length === 0) {
@@ -67,7 +70,7 @@ class KoaHttpServerBap extends besh.HttpServerBap {
       try {
         // This gets around the issue of sym links
         besh.require(script)(this);
-      } catch(e) {
+      } catch (e) {
         throw this.Error(`Can not find bootstrap script ${script}`);
       }
     }
@@ -79,10 +82,25 @@ class KoaHttpServerBap extends besh.HttpServerBap {
     this.loadBootstraps();
 
     let port = this.getRequiredCfg(CFG_PORT);
+    let keepAliveTimeout = this.getCfg(CFG_KEEP_ALIVE_TIMEOUT);
+    let headersTimeout = this.getCfg(CFG_HEADERS_TIMEOUT);
+
     let ip = this.getInterfaceIp();
 
     this.log.info(`Starting to listening on (${ip}:${port})`);
-    this.server = this.app.listen(port, ip);
+    this.server = http.createServer(this.app.callback());
+
+    if (keepAliveTimeout !== undefined) {
+      this.info(`Setting keepAliveTimeout to (${keepAliveTimeout})`);
+      this.server.keepAliveTimeout = keepAliveTimeout;
+    }
+
+    if (headersTimeout !== undefined) {
+      this.info(`Setting headersTimeout to (${headersTimeout})`);
+      this.server.headersTimeout = headersTimeout;
+    }
+
+    this.server.listen(port, ip);
     this.log.info("Now listening!");
 
     this.log.info("Started!");
@@ -121,54 +139,54 @@ class KoaHttpServerBap extends besh.HttpServerBap {
   }
 
   getBasicAuth(ctx) {
-      let basic = ctx.header("Authorization");
-      if (basic === undefined) {
-          return null;
-      }
+    let basic = ctx.header("Authorization");
+    if (basic === undefined) {
+      return null;
+    }
 
-      let parts = basic.split(/ +/);
-      if (parts.length !== 2 || parts[0].toLowerCase() !== "basic") {
-          return null;
-      }
+    let parts = basic.split(/ +/);
+    if (parts.length !== 2 || parts[0].toLowerCase() !== "basic") {
+      return null;
+    }
 
-      let credentials = Buffer.from(parts[1], "base64").toString("ascii");
+    let credentials = Buffer.from(parts[1], "base64").toString("ascii");
 
-      // NOTE: There may be no password so length may be 1 or 2 
-      let pair = credentials.split(":");
-      if (pair.length > 2) {
-          return null;
-      }
+    // NOTE: There may be no password so length may be 1 or 2
+    let pair = credentials.split(":");
+    if (pair.length > 2) {
+      return null;
+    }
 
-      let auth = {};
-      auth.username = pair[0]
+    let auth = {};
+    auth.username = pair[0];
 
-      if (pair.length === 2) {
-          auth.password = pair[1];
-      } else {
-          auth.password = "";
-      }
+    if (pair.length === 2) {
+      auth.password = pair[1];
+    } else {
+      auth.password = "";
+    }
 
-      return auth;
+    return auth;
   }
 
   getCookies(ctx, next) {
-      let cookieJar = {};
-      //req[this.cookieJar] = cookieJar;
+    let cookieJar = {};
+    //req[this.cookieJar] = cookieJar;
 
-      let cookieList = ctx.header("Cookie");
-      if (cookieList === undefined) {
-          next();
-          return;
-      }
-
-      for (let cookie of cookieList.split(/ *; */)) {
-          let parts = cookie.split(/ *= */);
-          if (parts.length === 2) {
-              cookieJar[parts[0]] = parts[1].trim();
-          }
-      }
-
+    let cookieList = ctx.header("Cookie");
+    if (cookieList === undefined) {
       next();
+      return;
+    }
+
+    for (let cookie of cookieList.split(/ *; */)) {
+      let parts = cookie.split(/ *= */);
+      if (parts.length === 2) {
+        cookieJar[parts[0]] = parts[1].trim();
+      }
+    }
+
+    next();
   }
 }
 
